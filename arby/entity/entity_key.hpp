@@ -58,7 +58,7 @@ struct entity_key
 {
     using map_type = std::map< std::string, std::string >;
 
-    explicit entity_key(map_type values = map_type());
+    entity_key(map_type values = map_type());
 
     friend std::size_t
     hash_value(entity_key const &key);

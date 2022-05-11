@@ -14,6 +14,8 @@
 #include "util/monitor.hpp"
 #include "util/truncate.hpp"
 
+#include <boost/asio/associated_cancellation_slot.hpp>
+#include <boost/asio/this_coro.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/scope_exit.hpp>
 #include <fmt/chrono.h>
@@ -161,11 +163,17 @@ connector_impl::interruptible_connect(ws_stream &stream)
     {
         auto ic_slot = interrupt_connection_.slot();
         ic_slot.assign(forward_interrupt);
-        BOOST_SCOPE_EXIT_ALL(ic_slot) { ic_slot.clear(); };
+        BOOST_SCOPE_EXIT_ALL(ic_slot)
+        {
+            ic_slot.clear();
+        };
 
         auto my_slot = (co_await asio::this_coro::cancellation_state).slot();
         my_slot.assign(forward_interrupt);
-        BOOST_SCOPE_EXIT_ALL(my_slot) { my_slot.clear(); };
+        BOOST_SCOPE_EXIT_ALL(my_slot)
+        {
+            my_slot.clear();
+        };
 
         co_await co_spawn(get_executor(),
                           network::connect(stream, host_, port_, path_),
@@ -216,8 +224,8 @@ connector_impl::receive_loop(ws_stream &ws)
 
     try
     {
-        error_code         ec;
-        auto               pmessage = std::make_shared< inbound_message >(std::size_t(10'000'000));
+        error_code ec;
+        auto       pmessage = std::make_shared< inbound_message_type >(std::size_t(10'000'000));
         for (; !ec;)
         {
             auto size = co_await ws.async_read(pmessage->prepare(), redirect_error(use_awaitable, ec));
@@ -254,7 +262,7 @@ connector_impl::receive_loop(ws_stream &ws)
 }
 
 bool
-connector_impl::handle_message(std::shared_ptr< inbound_message const > pmessage)
+connector_impl::handle_message(std::shared_ptr< inbound_message_type const > pmessage)
 {
     auto &sig = signal_map_[pmessage->type()];
     if (sig.empty())

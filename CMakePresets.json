@@ -7,47 +7,34 @@
     },
     "configurePresets": [
         {
-            "name": "default",
-            "displayName": "Default Config",
-            "description": "Default build using Ninja generator",
+            "name": "clang c++20",
+            "displayName": "Clang c++ 20",
+            "description": "Clang compiler using Ninja generator",
             "generator": "Ninja",
-            "binaryDir": "${sourceDir}/build/default",
+            "binaryDir": "${sourceDir}/build/clang",
             "cacheVariables": {
                 "CMAKE_PREFIX_PATH": {
                     "type": "PATH",
-                    "value": "/home/rhodges/work/libstdc++"
+                    "value": "/home/ahodges/libs/install/libc++"
                 },
-                "CMAKE_CXX_STANDARD": {
-                    "type": "STRING",
-                    "value": "20"
-                },
-                "CMAKE_BUILD_TYPE": {
-                    "type": "STRING",
-                    "value": "Debug"
-                }
-            },
-            "environment": {
-                "MY_ENVIRONMENT_VARIABLE": "Test",
-                "PATH": "$env{HOME}/ninja/bin:$penv{PATH}"
+                "CMAKE_CXX_STANDARD": "20",
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_FLAGS": "\"-stdlib=libc++\"",
+                "CMAKE_C_COMPILER": "/bin/clang",
+                "CMAKE_CXX_COMPILER": "/bin/clang++",
+                "ARBY_FIND_BOOST": true
             },
             "vendor": {
                 "example.com/ExampleIDE/1.0": {
                     "autoFormat": true
                 }
             }
-        },
-        {
-            "name": "ninja-multi",
-            "inherits": "default",
-            "displayName": "Ninja Multi-Config",
-            "description": "Default build using Ninja Multi-Config generator",
-            "generator": "Ninja Multi-Config"
         }
     ],
     "buildPresets": [
         {
             "name": "default",
-            "configurePreset": "default"
+            "configurePreset": "clang c++20"
         }
     ],
     "testPresets": [

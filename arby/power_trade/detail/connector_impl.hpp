@@ -15,6 +15,7 @@
 #include "power_trade/connection_state.hpp"
 #include "trading/types.hpp"
 #include "util/cross_executor_connection.hpp"
+#include "connector/inbound_message.hpp"
 
 #include <boost/asio/awaitable.hpp>
 #include <boost/functional/hash.hpp>
@@ -136,75 +137,14 @@ struct connector_impl
     using ws_stream                   = websocket::stream< tls_layer >;
     static constexpr char classname[] = "connector_impl";
 
-    class inbound_message
-    {
-        trading::timestamp_type timestamp_;
-        beast::flat_buffer      buffer_;
-        json::value             value_;
-        json::string            type_;
-        json::object const     *object_;
+    using inbound_message_type  = connector::inbound_message<beast::flat_buffer>;
 
-      public:
-        inbound_message(std::size_t capacity)
-        : buffer_(capacity)
-        {
-        }
 
-        json::object const& object() const
-        {
-            return *object_;
-        }
-
-        beast::flat_buffer &
-        prepare()
-        {
-            timestamp_ = std::chrono::system_clock::now();
-            object_    = nullptr;
-            type_.clear();
-            value_ = nullptr;
-            buffer_.clear();
-            return buffer_;
-        }
-
-        std::string_view
-        view() const
-        {
-            auto d = buffer_.data();
-            return std::string_view(static_cast< const char * >(d.data()), d.size());
-        }
-
-        json::string const &
-        type() const
-        {
-            return type_;
-        }
-
-        trading::timestamp_type
-        timestamp() const
-        {
-            return timestamp_;
-        }
-
-        void
-        commit()
-        {
-            timestamp_ = std::chrono::system_clock::now();
-            auto v     = view();
-            auto v1    = json::string_view(v.begin(), v.end());
-            value_     = json::parse(v);
-            if (auto outer = value_.if_object(); outer && !outer->empty())
-            {
-                auto &[k, v] = *outer->begin();
-                type_.assign(k.begin(), k.end());
-                object_ = v.if_object();
-            }
-        }
-    };
 
     // Note that the signal type is not thread-safe. You must only interact with
     // the signals while on the same executor and thread as the connector
     using message_signal =
-        boost::signals2::signal_type< void(std::shared_ptr< inbound_message const >),
+        boost::signals2::signal_type< void(std::shared_ptr< inbound_message_type const >),
                                       boost::signals2::keywords::mutex_type< boost::signals2::dummy_mutex > >::type;
 
     using message_slot          = message_signal::slot_type;
@@ -263,7 +203,7 @@ struct connector_impl
     /// @return boolean value indicating that the message was dispatched to at
     /// least one listener
     bool
-    handle_message(std::shared_ptr< inbound_message const > pmessage);
+    handle_message(std::shared_ptr< inbound_message_type const > pmessage);
 
     void
     set_connection_state(error_code ec);

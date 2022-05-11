@@ -39,9 +39,10 @@ struct entity_interface_service_base
     virtual std::type_index
     index() const = 0;
 
-    std::shared_ptr< entity_handle_base > virtual construct(entity::invariants const &invariants,
-                                                            entity_service           &cache,
-                                                            std::any const           &key) = 0;
+    virtual std::shared_ptr< entity_handle_base >
+    construct(entity::invariants const &invariants, entity_service &cache, std::any const &key) = 0;
+
+    virtual ~entity_interface_service_base() = default;
 };
 
 template < std::derived_from< entity_handle_base > Interface, const char *ClassName >

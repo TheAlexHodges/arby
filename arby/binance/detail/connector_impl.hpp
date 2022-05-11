@@ -14,6 +14,8 @@
 #include "asioex/helpers.hpp"
 #include "config/json.hpp"
 #include "config/websocket.hpp"
+#include "connector/inbound_message.hpp"
+#include "connector_traits.hpp"
 #include "entity/entity_base.hpp"
 #include "power_trade/connection_state.hpp"
 #include "util/cross_executor_connection.hpp"
@@ -35,8 +37,9 @@ struct binance_connector_args
 void
 merge(entity::entity_key &target, binance_connector_args const &args);
 
-
-struct connector_impl : entity::entity_base
+struct connector_impl
+: entity::entity_base
+, connector_traits
 //, std::enable_shared_from_this< connector_impl >
 {
     using executor_type = asio::any_io_executor;
@@ -44,27 +47,34 @@ struct connector_impl : entity::entity_base
     using tls_layer     = asio::ssl::stream< tcp_layer >;
     using ws_stream     = websocket::stream< tls_layer >;
 
+    using inbound_message_type = connector::inbound_message< beast::flat_buffer >;
+
     connector_impl(asio::any_io_executor exec, ssl::context &ioc, binance_connector_args args);
 
     std::string_view
-    classname() const override { return "binance::connector"; };
+    classname() const override
+    {
+        return "binance::connector";
+    };
+
+    void
+    send(std::string s);
+    void
+    interrupt();
+
+    // boost::signals2::connection watch_messages(json::string message_type, message_slot slot)
 
   private:
     void
     extend_summary(std::string &buffer) const override;
-
-    static asio::awaitable< void >
-    run(std::shared_ptr< connector_impl > self)
-    {
-        co_await asioex::spin();
-    }
-
     void
     handle_start() override;
     void
     handle_stop() override;
 
   private:
+    static asio::awaitable< void >
+    run(std::shared_ptr< connector_impl > self);
 
     asio::awaitable< void >
     run_connection();
@@ -78,12 +88,21 @@ struct connector_impl : entity::entity_base
     asio::awaitable< void >
     interruptible_connect(ws_stream &stream);
 
+    bool
+    handle_message(std::shared_ptr< inbound_message_type const > pmessage);
+
+    void
+    set_connection_state(error_code ec);
+
   private:
     // dependencies
     ssl::context &ssl_ctx_;
 
     // arguments
     binance_connector_args args_;
+
+    connection_state_signal connstate_signal_;
+    connection_state        connstate_ { asio::error::not_connected };
 
     // state
     std::deque< std::string > send_queue_;

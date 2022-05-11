@@ -63,7 +63,7 @@ struct fix_connector_impl : entity::entity_base
 
     fix_connector_args args_;
 
-    connection_state connstate_ = connection_down;
+    connection_state connstate_ = { asio::error::not_connected };
 };
 
 }   // namespace reactive

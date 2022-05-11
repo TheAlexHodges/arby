@@ -9,6 +9,7 @@
 
 #include "asioex/async_semaphore.hpp"
 #include "asioex/scoped_interrupt.hpp"
+#include "binance/detail/connector_impl.hpp"
 #include "config/websocket.hpp"
 #include "power_trade/connector.hpp"
 #include "power_trade/event_listener.hpp"
@@ -22,6 +23,7 @@
 #include "web/entity_detail_app.hpp"
 #include "web/entity_summary_app.hpp"
 #include "web/http_server.hpp"
+#include "binance/connector.hpp"
 
 #include <boost/asio.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
@@ -215,6 +217,10 @@ main(int argc, char **argv)
     auto svc = entity::entity_service();
     svc.add_invariants(ioc.get_executor(), ssl_context(sslctx), threadpool.get_executor());
     //    svc.add_entity_service(entity::entity_interface_service<trading::aggregate_book, "AggregateBook">());
+
+    auto args = binance::detail::binance_connector_args{"35.186.148.56","4321","/"};
+    auto key = entity::entity_key();
+    binance::detail::merge(key, args);
 
     try
     {

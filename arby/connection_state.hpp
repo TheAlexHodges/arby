@@ -10,17 +10,53 @@
 #ifndef ARBY_CONNECTION_STATE_HPP
 #define ARBY_CONNECTION_STATE_HPP
 
-#include "config/wise_enum.hpp"
+#include "config/asio.hpp"
 
 namespace arby
 {
+struct connection_state
+{
+    connection_state(error_code ec = asio::error::not_connected)
+    : ec_(ec)
+    {
+    }
 
-WISE_ENUM(connection_state, connection_down, connection_unauthenticated, connection_up)
+    void
+    set(error_code ec)
+    {
+        ec_ = ec;
+    }
+
+    bool
+    up() const
+    {
+        return !ec_;
+    }
+
+    bool
+    down() const
+    {
+        return ec_.failed();
+    }
+
+    friend std::ostream &
+    operator<<(std::ostream &os, connection_state const &cstate);
+
+  private:
+    error_code ec_;
+};
+
+
+/*
+ #include "config/wise_enum.hpp"
+
+ WISE_ENUM(connection_state, connection_down, connection_unauthenticated, connection_up)
 template<class Stream>
 decltype(auto) operator<<(Stream& os, connection_state cs)
 {
     return os << wise_enum::to_string(cs);
 }
+*/
 
 
 }   // namespace arby
