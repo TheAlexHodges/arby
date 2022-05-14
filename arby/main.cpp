@@ -9,6 +9,7 @@
 
 #include "asioex/async_semaphore.hpp"
 #include "asioex/scoped_interrupt.hpp"
+#include "binance/connector.hpp"
 #include "binance/detail/connector_impl.hpp"
 #include "config/websocket.hpp"
 #include "power_trade/connector.hpp"
@@ -23,7 +24,6 @@
 #include "web/entity_detail_app.hpp"
 #include "web/entity_summary_app.hpp"
 #include "web/http_server.hpp"
-#include "binance/connector.hpp"
 
 #include <boost/asio.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
@@ -180,7 +180,6 @@ check(ssl::context &sslctx)
     //    auto [w3con, snap3] = watch3->subscribe([](std::shared_ptr< power_trade::orderbook_snapshot const > snap)
     //                                            { spdlog::info("*** snapshot *** {}", snap); });
     //    spdlog::info("*** snapshot *** {}", snap3);
-
     /*
 asio::cancellation_signal cancel_sig;
 co_await monitor_quit(cancel_sig, *con);
@@ -196,6 +195,24 @@ watch()
 
     auto sigs = asio::signal_set(co_await asio::this_coro::executor, SIGINT);
     co_await (util::monitor::mon() || sigs.async_wait(asio::use_awaitable));
+}
+
+asio::awaitable< void >
+run_binance(ssl::context &sslctx)
+{
+    auto sentinel  = util::monitor::record("check");
+    auto this_exec = co_await asio::this_coro::executor;
+
+    auto                                               stop_monitor = asio::cancellation_signal();
+    std::unordered_map< char, sigs::signal< void() > > key_signals;
+    sigs::scoped_connection                            qcon0 = key_signals['q'].connect([&] { asioex::terminate(stop_monitor); });
+
+    auto binance = std::make_unique< binance::connector >(
+        this_exec, sslctx, binance::detail::binance_connector_args { "35.186.148.56", "4321", "/" });
+
+    auto rcon = key_signals['r'].connect([&] { binance.reset(); });
+    co_await co_spawn(
+        this_exec, [&] { return monitor_keys(key_signals); }, asio::bind_cancellation_slot(stop_monitor.slot(), asio::use_awaitable));
 }
 
 int
@@ -218,14 +235,10 @@ main(int argc, char **argv)
     svc.add_invariants(ioc.get_executor(), ssl_context(sslctx), threadpool.get_executor());
     //    svc.add_entity_service(entity::entity_interface_service<trading::aggregate_book, "AggregateBook">());
 
-    auto args = binance::detail::binance_connector_args{"35.186.148.56","4321","/"};
-    auto key = entity::entity_key();
-    binance::detail::merge(key, args);
-
     try
     {
         //        co_spawn(ioc, watch(), detached);
-        co_spawn(ioc, check(sslctx), detached);
+        co_spawn(ioc, run_binance(sslctx), detached);
         ioc.run();
         threadpool.join();
     }

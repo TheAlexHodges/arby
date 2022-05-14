@@ -25,7 +25,7 @@ struct connector
     using message_slot          = impl_class::message_slot;
     using connection_state_slot = impl_class::connection_state_slot;
     using executor_type         = impl_class::executor_type;
-    using inbound_message       = impl_class::inbound_message;
+    using inbound_message       = impl_class::inbound_message_type;
 
     connector(asio::any_io_executor exec, ssl::context &ioc);
 

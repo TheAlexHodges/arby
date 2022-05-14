@@ -14,11 +14,11 @@
 #include "asioex/helpers.hpp"
 #include "config/json.hpp"
 #include "config/websocket.hpp"
-#include "connector/inbound_message.hpp"
-#include "connector_traits.hpp"
+#include "connector/connector_traits.hpp"
 #include "entity/entity_base.hpp"
 #include "power_trade/connection_state.hpp"
 #include "util/cross_executor_connection.hpp"
+#include "util/signal_map.hpp"
 
 namespace arby
 {
@@ -39,16 +39,8 @@ merge(entity::entity_key &target, binance_connector_args const &args);
 
 struct connector_impl
 : entity::entity_base
-, connector_traits
-//, std::enable_shared_from_this< connector_impl >
+, connector::connector_traits
 {
-    using executor_type = asio::any_io_executor;
-    using tcp_layer     = tcp::socket;
-    using tls_layer     = asio::ssl::stream< tcp_layer >;
-    using ws_stream     = websocket::stream< tls_layer >;
-
-    using inbound_message_type = connector::inbound_message< beast::flat_buffer >;
-
     connector_impl(asio::any_io_executor exec, ssl::context &ioc, binance_connector_args args);
 
     std::string_view
@@ -62,7 +54,11 @@ struct connector_impl
     void
     interrupt();
 
-    // boost::signals2::connection watch_messages(json::string message_type, message_slot slot)
+    boost::signals2::connection
+    watch_messages(json::string message_type, message_slot slot);
+
+    boost::signals2::connection
+    watch_connection_state(connection_state &current, connection_state_slot slot);
 
   private:
     void
@@ -103,6 +99,9 @@ struct connector_impl
 
     connection_state_signal connstate_signal_;
     connection_state        connstate_ { asio::error::not_connected };
+
+    using signal_map_type = util::signal_map< json::string, message_signal >;
+    signal_map_type signal_map_;
 
     // state
     std::deque< std::string > send_queue_;

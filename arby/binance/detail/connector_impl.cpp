@@ -24,6 +24,7 @@
 #include <boost/asio/time_traits.hpp>
 #include <boost/scope_exit.hpp>
 #include <fmt/format.h>
+#include <fmt/ostream.h>
 #include <spdlog/spdlog.h>
 
 namespace arby
@@ -201,13 +202,6 @@ connector_impl::interruptible_connect(connector_impl::ws_stream &stream)
         throw system_error(asio::error::operation_aborted, "interrupted");
 }
 
-void
-connector_impl::set_connection_state(error_code ec)
-{
-    connstate_.set(ec);
-    connstate_signal_(connstate_);
-}
-
 asio::awaitable< void >
 connector_impl::send_loop(ws_stream &ws)
 {
@@ -266,12 +260,12 @@ connector_impl::receive_loop(ws_stream &ws)
             }
             catch (std::exception &e)
             {
-                ec = asio::error:invalid_argument;
+                ec = asio::error::invalid_argument;
             }
         }
         if (connstate_.up())
-            set_connection_state(ec)
-        send_sv_.cancel();
+            set_connection_state(ec);
+        send_cv_.cancel();
     }
     catch (std::exception &e)
     {
@@ -283,7 +277,34 @@ connector_impl::receive_loop(ws_stream &ws)
 bool
 connector_impl::handle_message(std::shared_ptr< inbound_message_type const > pmessage)
 {
+    auto ifind = signal_map_.find(pmessage->type());
+    if (ifind == signal_map_.end())
+        return false;
+    ifind->second(pmessage);
+    return true;
 }
+
+boost::signals2::connection
+connector_impl::watch_messages(json::string message_type, message_slot slot)
+{
+    auto &sig = signal_map_[message_type];
+    return sig.connect(std::move(slot));
+}
+
+boost::signals2::connection
+connector_impl::watch_connection_state(connection_state &current, connection_state_slot slot)
+{
+    current = connstate_;
+    return connstate_signal_.connect(std::move(slot));
+}
+
+void
+connector_impl::set_connection_state(error_code ec)
+{
+    connstate_.set(ec);
+    connstate_signal_(connstate_);
+}
+
 
 }   // namespace detail
 }   // namespace binance

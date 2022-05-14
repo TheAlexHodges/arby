@@ -94,7 +94,7 @@ struct entity_handle : entity_handle_base
 
     template < class... Args >
     entity_handle(asio::any_io_executor exec, Args &&...args)
-    : impl_(construct(exec, std::forward<Args>(args)...))
+    : impl_(construct(exec, std::forward< Args >(args)...))
     {
     }
 

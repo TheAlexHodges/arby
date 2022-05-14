@@ -139,8 +139,6 @@ struct connector_impl
 
     using inbound_message_type  = connector::inbound_message<beast::flat_buffer>;
 
-
-
     // Note that the signal type is not thread-safe. You must only interact with
     // the signals while on the same executor and thread as the connector
     using message_signal =

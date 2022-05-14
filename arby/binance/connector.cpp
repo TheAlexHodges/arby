@@ -15,6 +15,14 @@ namespace arby
 {
 namespace binance
 {
+asio::awaitable< util::cross_executor_connection >
+connector::watch_connection_state(impl_class::connection_state_slot slot)
+{
+    auto this_exec = co_await asio::this_coro::executor;
+    auto my_exec = get_executor();
 
+    connection_state current;
+    util::
+}
 }   // namespace binance
 }   // namespace arby

@@ -32,9 +32,15 @@ struct connector : entity::entity_handle< detail::connector_impl >
     }
 
     connector(asio::any_io_executor exec, asio::ssl::context &sslctx, detail::binance_connector_args args)
-    : entity::entity_handle<impl_class>(exec, sslctx, args)
+    : entity::entity_handle< impl_class >(exec, sslctx, args)
     {
     }
+
+    asio::awaitable< util::cross_executor_connection >
+    watch_messages(json::string type, impl_class::message_slot slot);
+
+    asio::awaitable< util::cross_executor_connection >
+    watch_connection_state(impl_class::connection_state_slot slot);
 };
 }   // namespace binance
 }   // namespace arby
