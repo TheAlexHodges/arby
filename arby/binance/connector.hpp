@@ -26,6 +26,8 @@ struct connector : entity::entity_handle< detail::connector_impl >
     using impl_class = detail::connector_impl;
     using impl_type  = std::shared_ptr< impl_class >;
 
+    using connection_state_slot = impl_class::connection_state_slot;
+
     connector(impl_type impl)
     : entity::entity_handle< impl_class >(impl)
     {
@@ -36,11 +38,16 @@ struct connector : entity::entity_handle< detail::connector_impl >
     {
     }
 
+    void send(std::string s) {
+        auto impl = get_implementation();
+        asio::dispatch(impl->get_executor(),[s = std::move(s), impl = impl] () mutable {impl->send(std::move(s));});
+    }
+
     asio::awaitable< util::cross_executor_connection >
     watch_messages(json::string type, impl_class::message_slot slot);
 
-    asio::awaitable< util::cross_executor_connection >
-    watch_connection_state(impl_class::connection_state_slot slot);
+    asio::awaitable< std::tuple<util::cross_executor_connection, connection_state> >
+    watch_connection_state(connection_state_slot slot);
 };
 }   // namespace binance
 }   // namespace arby

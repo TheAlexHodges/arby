@@ -104,6 +104,9 @@ struct connector_impl
     signal_map_type signal_map_;
 
     // state
+    const std::size_t         max_active_streams_ = 1024;
+    std::set< std::string >   active_streams_;
+
     std::deque< std::string > send_queue_;
     asio::steady_timer        send_cv_ { get_executor() };
     asio::cancellation_signal interrupt_connection_;

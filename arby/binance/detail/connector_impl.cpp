@@ -305,7 +305,6 @@ connector_impl::set_connection_state(error_code ec)
     connstate_signal_(connstate_);
 }
 
-
 }   // namespace detail
 }   // namespace binance
 }   // namespace arby
