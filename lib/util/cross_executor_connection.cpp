@@ -13,32 +13,32 @@ namespace arby
 {
 namespace util
 {
-    cross_executor_connection::cross_executor_connection(std::shared_ptr< has_executor_base > owner,
-                                                         boost::signals2::connection          connection)
-    : owner_(std::move(owner))
-    , connection_(std::move(connection))
+cross_executor_connection::cross_executor_connection(std::shared_ptr< has_executor_base > owner,
+                                                     boost::signals2::connection          connection)
+: owner_(std::move(owner))
+, connection_(std::move(connection))
+{
+}
+cross_executor_connection::cross_executor_connection(cross_executor_connection &&other)
+: owner_(std::move(other.owner_))
+, connection_(std::move(other.connection_))
+{
+}
+cross_executor_connection &
+cross_executor_connection::operator=(cross_executor_connection &&other)
+{
+    disconnect();
+    owner_      = std::exchange(other.owner_, {});
+    connection_ = std::exchange(other.connection_, {});
+    return *this;
+}
+void
+cross_executor_connection::disconnect() noexcept
+{
+    if (owner_)
     {
+        asio::dispatch(owner_->get_executor(), [owner = owner_, connection = connection_] { connection.disconnect(); });
     }
-    cross_executor_connection::cross_executor_connection(cross_executor_connection &&other)
-    : owner_(std::move(other.owner_))
-    , connection_(std::move(other.connection_))
-    {
-    }
-    cross_executor_connection &
-    cross_executor_connection::operator=(cross_executor_connection &&other)
-    {
-        disconnect();
-        owner_      = std::exchange(other.owner_, {});
-        connection_ = std::exchange(other.connection_, {});
-        return *this;
-    }
-    void
-    cross_executor_connection::disconnect() noexcept
-    {
-        if (owner_)
-        {
-            asio::dispatch(owner_->get_executor(), [owner = owner_, connection = connection_] { connection.disconnect(); });
-        }
-    }
+}
 }   // namespace util
 }   // namespace arby

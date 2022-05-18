@@ -19,41 +19,46 @@ namespace arby
 namespace util
 {
 
-    struct has_executor_base
+struct has_executor_base
+{
+    has_executor_base(asio::any_io_executor exec)
+    : exec_(std::move(exec))
     {
-        has_executor_base(asio::any_io_executor exec)
-        : exec_(std::move(exec))
-        {
-        }
+    }
 
-        virtual asio::any_io_executor const &
-        get_executor() const
-        {
-            return exec_;
-        }
-
-      private:
-        asio::any_io_executor exec_;
-    };
-
-    struct cross_executor_connection
+    virtual asio::any_io_executor const &
+    get_executor() const
     {
-        cross_executor_connection(std::shared_ptr< has_executor_base > owner = {}, boost::signals2::connection connection = {});
+        return exec_;
+    }
 
-        cross_executor_connection(cross_executor_connection &&other);
+  private:
+    asio::any_io_executor exec_;
+};
 
-        cross_executor_connection &
-        operator=(cross_executor_connection &&other);
+struct cross_executor_connection
+{
+    //cross_executor_connection() = default;
+    cross_executor_connection(std::shared_ptr< has_executor_base > owner = {}, boost::signals2::connection connection = {});
 
-        ~cross_executor_connection() { disconnect(); }
+    cross_executor_connection(cross_executor_connection &&other);
 
-        void
-        disconnect() noexcept;
+    cross_executor_connection &
+    operator=(cross_executor_connection &&other);
 
-      private:
-        std::shared_ptr< has_executor_base > owner_;
-        boost::signals2::connection          connection_;
-    };
+    cross_executor_connection(cross_executor_connection const &) = delete;
+    cross_executor_connection &
+    operator=(cross_executor_connection const &) = delete;
+
+    ~cross_executor_connection() { disconnect(); }
+
+    void
+    disconnect() noexcept;
+
+  private:
+    std::shared_ptr< has_executor_base > owner_;
+    boost::signals2::connection          connection_;
+};
 
 }   // namespace util
 }   // namespace arby
