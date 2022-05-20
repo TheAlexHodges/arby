@@ -11,6 +11,7 @@
 #include "connector_impl.hpp"
 
 #include "asioex/scoped_interrupt.hpp"
+#include "config/format.hpp"
 #include "network/connect_ssl.hpp"
 #include "util/cross_executor_connection.hpp"
 #include "util/monitor.hpp"
@@ -23,9 +24,6 @@
 #include <boost/asio/post.hpp>
 #include <boost/asio/time_traits.hpp>
 #include <boost/scope_exit.hpp>
-#include <fmt/format.h>
-#include <fmt/ostream.h>
-#include <spdlog/spdlog.h>
 
 namespace arby
 {
@@ -277,18 +275,16 @@ connector_impl::receive_loop(ws_stream &ws)
 bool
 connector_impl::handle_message(std::shared_ptr< inbound_message_type const > pmessage)
 {
-    auto ifind = signal_map_.find(pmessage->type());
-    if (ifind == signal_map_.end())
+    if (msg_signal_.empty())
         return false;
-    ifind->second(pmessage);
+    msg_signal_(pmessage);
     return true;
 }
 
 boost::signals2::connection
-connector_impl::watch_messages(json::string message_type, message_slot slot)
+connector_impl::watch_messages(message_slot slot)
 {
-    auto &sig = signal_map_[message_type];
-    return sig.connect(std::move(slot));
+    return msg_signal_.connect(std::move(slot));
 }
 
 boost::signals2::connection

@@ -52,7 +52,7 @@ struct connector
     void
     send(std::string s)
     {
-        asio::dispatch(impl_->get_executor(), [s = std::move(s), impl = impl_] { impl->send(std::move(s)); });
+        asio::dispatch(impl_->get_executor(), [s = std::move(s), impl = impl_] () mutable { impl->send(std::move(s)); });
     }
 
     void

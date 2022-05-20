@@ -8,13 +8,13 @@
 // Official repository: https://github.com/madmongo1/arby
 //
 
-#ifndef ARBY_ARBY_CONNECTOR_INBOUND_MESSAGE_HPP
-#define ARBY_ARBY_CONNECTOR_INBOUND_MESSAGE_HPP
+#ifndef ARBY_ARBY_POWER_TRADE_INBOUND_MESSAGE_HPP
+#define ARBY_ARBY_POWER_TRADE_INBOUND_MESSAGE_HPP
 
 #include "config/json.hpp"
 #include "trading/types.hpp"
 
-namespace arby::connector
+namespace arby::power_trade
 {
 
 template < class Buffer >
@@ -23,6 +23,7 @@ class inbound_message
     trading::timestamp_type timestamp_;
     Buffer                  buffer_;
     json::value             value_;
+    json::string            type_;
     json::object const     *object_;
 
   public:
@@ -42,7 +43,8 @@ class inbound_message
     {
         timestamp_ = std::chrono::system_clock::now();
         object_    = nullptr;
-        value_     = nullptr;
+        type_.clear();
+        value_ = nullptr;
         buffer_.clear();
         return buffer_;
     }
@@ -52,6 +54,12 @@ class inbound_message
     {
         auto d = buffer_.data();
         return std::string_view(static_cast< const char * >(d.data()), d.size());
+    }
+
+    json::string const &
+    type() const
+    {
+        return type_;
     }
 
     trading::timestamp_type
@@ -65,10 +73,16 @@ class inbound_message
     {
         timestamp_     = std::chrono::system_clock::now();
         auto data_view = view();
-        value_  = json::parse(data_view);
-        object_ = value_.if_object();
+        // auto v1    = json::string_view(v.begin(), v.end());
+        value_ = json::parse(data_view);
+        if (auto outer = value_.if_object(); outer && !outer->empty())
+        {
+            auto &[k, v] = *outer->begin();   // Key, Value
+            type_.assign(k.begin(), k.end());
+            object_ = v.if_object();
+        }
     }
 };
-}   // namespace arby::connector
+}   // namespace arby::power_trade
 
-#endif   // ARBY_ARBY_CONNECTOR_INBOUND_MESSAGE_HPP
+#endif   // ARBY_ARBY_POWER_TRADE_INBOUND_MESSAGE_HPP

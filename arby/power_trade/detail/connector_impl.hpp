@@ -15,7 +15,7 @@
 #include "power_trade/connection_state.hpp"
 #include "trading/types.hpp"
 #include "util/cross_executor_connection.hpp"
-#include "connector/inbound_message.hpp"
+#include "power_trade/inbound_message.hpp"
 
 #include <boost/asio/awaitable.hpp>
 #include <boost/functional/hash.hpp>
@@ -137,7 +137,7 @@ struct connector_impl
     using ws_stream                   = websocket::stream< tls_layer >;
     static constexpr char classname[] = "connector_impl";
 
-    using inbound_message_type  = connector::inbound_message<beast::flat_buffer>;
+    using inbound_message_type  = inbound_message<beast::flat_buffer>;
 
     // Note that the signal type is not thread-safe. You must only interact with
     // the signals while on the same executor and thread as the connector

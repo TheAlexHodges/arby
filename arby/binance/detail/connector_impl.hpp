@@ -55,7 +55,7 @@ struct connector_impl
     interrupt();
 
     boost::signals2::connection
-    watch_messages(json::string message_type, message_slot slot);
+    watch_messages(message_slot slot);
 
     boost::signals2::connection
     watch_connection_state(connection_state &current, connection_state_slot slot);
@@ -100,12 +100,13 @@ struct connector_impl
     connection_state_signal connstate_signal_;
     connection_state        connstate_ { asio::error::not_connected };
 
-    using signal_map_type = util::signal_map< json::string, message_signal >;
-    signal_map_type signal_map_;
+    message_signal msg_signal_;
+    // using signal_map_type = util::signal_map< json::string, message_signal >;
+    // signal_map_type signal_map_;
 
     // state
-    const std::size_t         max_active_streams_ = 1024;
-    std::set< std::string >   active_streams_;
+    const std::size_t       max_active_streams_ = 1024;
+    std::set< std::string > active_streams_;
 
     std::deque< std::string > send_queue_;
     asio::steady_timer        send_cv_ { get_executor() };

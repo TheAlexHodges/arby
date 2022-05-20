@@ -39,12 +39,6 @@ entity_base::extend_summary(std::string &) const
 {
 }
 
-asio::any_io_executor const &
-entity_base::get_executor() const
-{
-    return exec_;
-}
-
 void
 entity_base::start()
 {
@@ -58,7 +52,7 @@ entity_base::start()
 }
 
 entity_base::entity_base(asio::any_io_executor exec)
-    : exec_(exec)
+: util::has_executor_base(exec)
 {
 }
 

@@ -18,14 +18,14 @@ namespace arby
 namespace binance
 {
 asio::awaitable< util::cross_executor_connection >
-connector::watch_messages(json::string type, impl_class::message_slot slot)
+connector::watch_messages(impl_class::message_slot slot)
 {
     co_return co_await asioex::execute_on(
         get_executor(),
         [&]() -> asio::awaitable< util::cross_executor_connection >
         {
             auto impl = get_implementation();
-            co_return util::cross_executor_connection { impl, impl->watch_messages(std::move(type), std::move(slot)) };
+            co_return util::cross_executor_connection { impl, impl->watch_messages(std::move(slot)) };
         });
 }
 

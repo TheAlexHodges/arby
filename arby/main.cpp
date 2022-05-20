@@ -141,7 +141,7 @@ check(ssl::context &sslctx)
     std::unordered_map< char, sigs::signal< void() > > key_signals;
     sigs::scoped_connection                            qcon0 = key_signals['q'].connect([&] { asioex::terminate(stop_monitor); });
 
-    auto                         svc = entity::entity_service();
+    /*auto                         svc = entity::entity_service();
     reactive::fix_connector_args reactive_args { .sender_comp_id      = "POWERTRADE_MD_1",
                                                  .target_comp_id      = "SWITCHBOARD_DEMO",
                                                  .socket_connect_host = "fix.demo.switchboard.reactivemarkets.com",
@@ -158,6 +158,7 @@ check(ssl::context &sslctx)
                                        .socket_connect_port = "8289",
                                        .use_ssl             = true });
     auto rcon = key_signals['r'].connect([&] { reactive.reset(); });
+     */
 
     auto http_server = web::http_server(this_exec);
     http_server.serve("localhost", "8080");

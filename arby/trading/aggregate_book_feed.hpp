@@ -10,6 +10,7 @@
 #ifndef ARBY_ARBY_TRADING_AGGREGATE_BOOK_FEED_HPP
 #define ARBY_ARBY_TRADING_AGGREGATE_BOOK_FEED_HPP
 
+#include "asioex/execute_on.hpp"
 #include "config/signals.hpp"
 #include "trading/aggregate_book_snapshot.hpp"
 #include "util/cross_executor_connection.hpp"
@@ -70,24 +71,13 @@ struct implement_aggregate_book_feed : aggregate_book_feed_iface
 
         auto self = static_cast< Derived * >(this)->shared_from_this();
 
-        auto   this_exec = co_await asio::this_coro::executor;
-        auto &&my_exec   = self->get_executor();
-
-        if (my_exec == this_exec)
-        {
-            co_return subscribe_result { .snapshot = last_snapshot_, .connection = { self, snap_sig_.connect(std::move(slot)) } };
-        }
-        else
-        {
-            co_return co_await co_spawn(
-                my_exec,
-                [&]() -> asio::awaitable< subscribe_result >
-                {
-                    co_return subscribe_result { .snapshot   = self->last_snapshot_,
-                                                 .connection = { self, self->snap_sig_.connect(std::move(slot)) } };
-                },
-                use_awaitable);
-        }
+        co_return co_await asioex::execute_on(
+            self->get_executor(),
+            [&]() -> asio::awaitable< subscribe_result >
+            {
+                co_return subscribe_result { .snapshot   = self->last_snapshot_,
+                                             .connection = { self, self->snap_sig_.connect(std::move(slot)) } };
+            });
     }
 
   protected:
@@ -122,8 +112,6 @@ struct implement_aggregate_book_feed : aggregate_book_feed_iface
   private:
     std::vector< std::unique_ptr< aggregate_book_snapshot > > snapshot_buffer_;
 };
-
-
 
 }   // namespace trading
 }   // namespace arby

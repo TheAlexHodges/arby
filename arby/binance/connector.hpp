@@ -23,8 +23,9 @@ namespace binance
 {
 struct connector : entity::entity_handle< detail::connector_impl >
 {
-    using impl_class = detail::connector_impl;
-    using impl_type  = std::shared_ptr< impl_class >;
+    using impl_class           = detail::connector_impl;
+    using impl_type            = std::shared_ptr< impl_class >;
+    using inbound_message_type = impl_class::inbound_message_type;
 
     using connection_state_slot = impl_class::connection_state_slot;
 
@@ -38,15 +39,17 @@ struct connector : entity::entity_handle< detail::connector_impl >
     {
     }
 
-    void send(std::string s) {
+    void
+    send(std::string s)
+    {
         auto impl = get_implementation();
-        asio::dispatch(impl->get_executor(),[s = std::move(s), impl = impl] () mutable {impl->send(std::move(s));});
+        asio::dispatch(impl->get_executor(), [s = std::move(s), impl = impl]() mutable { impl->send(std::move(s)); });
     }
 
     asio::awaitable< util::cross_executor_connection >
-    watch_messages(json::string type, impl_class::message_slot slot);
+    watch_messages(impl_class::message_slot slot);
 
-    asio::awaitable< std::tuple<util::cross_executor_connection, connection_state> >
+    asio::awaitable< std::tuple< util::cross_executor_connection, connection_state > >
     watch_connection_state(connection_state_slot slot);
 };
 }   // namespace binance

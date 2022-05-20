@@ -11,6 +11,7 @@
 #define ARBY_ENTITY_BASE_HPP
 #include "config/wise_enum.hpp"
 #include "entity/entity_service.hpp"
+#include "util/cross_executor_connection.hpp"
 
 #include <concepts>
 
@@ -18,7 +19,9 @@ namespace arby
 {
 namespace entity
 {
-struct entity_base : std::enable_shared_from_this< entity_base >
+struct entity_base
+: std::enable_shared_from_this< entity_base >
+, util::has_executor_base
 {
     WISE_ENUM_MEMBER(entity_state, not_started, started, stopped)
 
@@ -48,9 +51,6 @@ struct entity_base : std::enable_shared_from_this< entity_base >
 
     virtual ~entity_base() = default;
 
-    asio::any_io_executor const &
-    get_executor() const;
-
   private:
     virtual void
     extend_summary(std::string &buffer) const;
@@ -61,8 +61,7 @@ struct entity_base : std::enable_shared_from_this< entity_base >
     virtual void
     handle_stop() {};
 
-    asio::any_io_executor exec_;
-    entity_state          estate_ = not_started;
+    entity_state estate_ = not_started;
 };
 
 template < class T >
@@ -137,6 +136,13 @@ struct entity_handle : entity_handle_base
     }
 
     ~entity_handle() { stop_check(); }
+
+  protected:
+    implementation_type
+    get_implementation()
+    {
+        return impl_;
+    }
 
   private:
     template < class... Args >
