@@ -21,18 +21,19 @@ struct connector_traits
     using ws_stream     = websocket::stream< tls_layer >;
 
     using inbound_message_type = inbound_message< beast::flat_buffer >;
+    using connection_id        = std::uint64_t;
 
     // Note that the signal type is not thread-safe. You must only interact with
     // the signals while on the same executor and thread as the connector
     using message_signal =
-        boost::signals2::signal_type< void(std::shared_ptr< inbound_message_type const >),
+        boost::signals2::signal_type< void(connection_id, std::shared_ptr< inbound_message_type const >),
                                       boost::signals2::keywords::mutex_type< boost::signals2::dummy_mutex > >::type;
 
     using message_slot          = message_signal::slot_type;
     using message_extended_slot = message_signal::extended_slot_type;
 
     using connection_state_signal =
-        boost::signals2::signal_type< void(connection_state),
+        boost::signals2::signal_type< void(connection_id, connection_state),
                                       boost::signals2::keywords::mutex_type< boost::signals2::dummy_mutex > >::type;
     using connection_state_slot          = connection_state_signal::slot_type;
     using connection_state_extended_slot = connection_state_signal::extended_slot_type;

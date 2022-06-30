@@ -29,19 +29,27 @@ connector::watch_messages(impl_class::message_slot slot)
         });
 }
 
-asio::awaitable< std::tuple< util::cross_executor_connection, connection_state > >
+asio::awaitable< std::tuple< util::cross_executor_connection, connector::impl_class::connection_id, connection_state > >
 connector::watch_connection_state(connection_state_slot slot)
 {
     connection_state current;
 
     co_return co_await asioex::execute_on(
         get_executor(),
-        [&]() -> asio::awaitable< std::tuple< util::cross_executor_connection, connection_state > >
+        [&]() -> asio::awaitable<
+                  std::tuple< util::cross_executor_connection, connector::impl_class::connection_id, connection_state > >
         {
-            auto impl = get_implementation();
-            auto conn = impl->watch_connection_state(current, std::move(slot));
-            co_return std::make_tuple(util::cross_executor_connection(impl, conn), current);
+            auto impl            = get_implementation();
+            auto [conn_id, conn] = impl->watch_connection_state(current, std::move(slot));
+            co_return std::make_tuple(util::cross_executor_connection(impl, conn), conn_id, current);
         });
 }
+
+void
+connector::interrupt()
+{
+    asio::dispatch(get_executor(), [impl = get_implementation()]() { impl->interrupt(); });
+}
+
 }   // namespace binance
 }   // namespace arby

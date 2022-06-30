@@ -73,7 +73,6 @@ class inbound_message
     {
         timestamp_     = std::chrono::system_clock::now();
         auto data_view = view();
-        // auto v1    = json::string_view(v.begin(), v.end());
         value_ = json::parse(data_view);
         if (auto outer = value_.if_object(); outer && !outer->empty())
         {

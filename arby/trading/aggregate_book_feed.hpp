@@ -94,15 +94,15 @@ struct implement_aggregate_book_feed : aggregate_book_feed_iface
                 delete snap;
         };
 
-        auto pop_or_create = [&]
+        auto pop_or_create = [&]() -> aggregate_book_snapshot*
         {
             if (snapshot_buffer_.empty())
-                return std::make_unique< aggregate_book_snapshot >();
+                return new aggregate_book_snapshot();
             else
             {
                 auto result = std::move(snapshot_buffer_.back());
                 snapshot_buffer_.pop_back();
-                return result;
+                return result.release();
             }
         };
 

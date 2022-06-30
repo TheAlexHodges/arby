@@ -98,6 +98,7 @@ connector_impl::run(std::shared_ptr< connector_impl > self)
         try
         {
             co_await self->run_connection();
+            ++(self->conn_id_);
         }
         catch (std::exception &e)
         {
@@ -277,7 +278,7 @@ connector_impl::handle_message(std::shared_ptr< inbound_message_type const > pme
 {
     if (msg_signal_.empty())
         return false;
-    msg_signal_(pmessage);
+    msg_signal_(conn_id_, pmessage);
     return true;
 }
 
@@ -287,18 +288,18 @@ connector_impl::watch_messages(message_slot slot)
     return msg_signal_.connect(std::move(slot));
 }
 
-boost::signals2::connection
+std::tuple< connector_impl::connection_id, boost::signals2::connection >
 connector_impl::watch_connection_state(connection_state &current, connection_state_slot slot)
 {
     current = connstate_;
-    return connstate_signal_.connect(std::move(slot));
+    return std::make_tuple(conn_id_, connstate_signal_.connect(std::move(slot)));
 }
 
 void
 connector_impl::set_connection_state(error_code ec)
 {
     connstate_.set(ec);
-    connstate_signal_(connstate_);
+    connstate_signal_(conn_id_, connstate_);
 }
 
 }   // namespace detail

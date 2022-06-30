@@ -51,13 +51,14 @@ struct connector_impl
 
     void
     send(std::string s);
+
     void
     interrupt();
 
     boost::signals2::connection
     watch_messages(message_slot slot);
 
-    boost::signals2::connection
+    std::tuple< connection_id, boost::signals2::connection >
     watch_connection_state(connection_state &current, connection_state_slot slot);
 
   private:
@@ -99,10 +100,9 @@ struct connector_impl
 
     connection_state_signal connstate_signal_;
     connection_state        connstate_ { asio::error::not_connected };
+    connection_id           conn_id_ { 0 };
 
     message_signal msg_signal_;
-    // using signal_map_type = util::signal_map< json::string, message_signal >;
-    // signal_map_type signal_map_;
 
     // state
     const std::size_t       max_active_streams_ = 1024;

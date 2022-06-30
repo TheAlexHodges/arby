@@ -9,10 +9,8 @@
 
 #include "order_book.hpp"
 
+#include "config/format.hpp"
 #include "util/table.hpp"
-
-#include <fmt/chrono.h>
-#include <fmt/ostream.h>
 
 #include <algorithm>
 #include <chrono>
@@ -142,7 +140,6 @@ operator==(order_book const &l, order_book const &r)
 void
 order_book::execute(tick_record::execute const &tick)
 {
-
     if (tick.side == trading::buy)
     {
         auto icache = bid_cache_.find(tick.order_id);

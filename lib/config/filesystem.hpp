@@ -11,6 +11,7 @@
 #define ARBY_LIB_CONFIG_FILESYSTEM_HPP
 
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 namespace arby
 {
 namespace fs = boost::filesystem;

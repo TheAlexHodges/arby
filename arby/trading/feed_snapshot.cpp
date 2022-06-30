@@ -9,9 +9,8 @@
 
 #include "feed_snapshot.hpp"
 
-#include <fmt/chrono.h>
-#include <fmt/format.h>
-#include <fmt/ostream.h>
+#include "config/format.hpp"
+
 #include <fmt/ranges.h>
 
 namespace arby

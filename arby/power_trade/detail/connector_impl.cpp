@@ -128,16 +128,17 @@ connector_impl::run_connection()
             co_await co_spawn(
                 get_executor(), send_loop(ws) || receive_loop(ws), bind_cancellation_slot(forward_signal.slot(), use_awaitable));
         }
-        set_connection_state(asio::error::not_connected);
     }
     catch (boost::system::system_error &se)
     {
-        set_connection_state(se.code());
+        if (connstate_.down())
+            set_connection_state(se.code());
         fmt::print("{}: exception: {}\n", __func__, se.what());
     }
     catch (std::exception &e)
     {
-        set_connection_state(asio::error::no_such_device);
+        if (connstate_.down())
+            set_connection_state(asio::error::no_such_device);
         fmt::print("{}: exception: {}\n", __func__, e.what());
     }
     fmt::print("{}: complete\n", __func__);
@@ -249,9 +250,8 @@ connector_impl::receive_loop(ws_stream &ws)
                 ec = asio::error::invalid_argument;
             }
         }
-
-        if (connstate_.up())
-            set_connection_state(ec);
+        assert(connstate_.up());
+        set_connection_state(ec);
         send_cv_.cancel();
     }
     catch (std::exception &e)

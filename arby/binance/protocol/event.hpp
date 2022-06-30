@@ -40,7 +40,7 @@ struct depth_update
     parse(const json::object &o);
 
     std::string    e;
-    std::uint64_t  E;
+    std::uint64_t  E; // Event time
     std::string    s;
     std::uint64_t  U;
     std::uint64_t  u;

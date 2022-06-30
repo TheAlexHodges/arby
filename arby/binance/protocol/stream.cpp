@@ -32,6 +32,9 @@ parse_stream(const json::value &v)
             return stream_event::parse(o);
         if (key == "result")
             return stream_response::parse(o);
+        else
+            throw std::runtime_error("invalid stream message");
     }
+    throw std::runtime_error("invalid empty message");
 }
 }   // namespace arby::binance::protocol

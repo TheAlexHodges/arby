@@ -8,16 +8,23 @@
 #include "asioex/execute_on.hpp"
 #include "config/format.hpp"
 #include "config/http.hpp"
+#include "protocol/http.hpp"
 #include "util/cross_executor_connection.hpp"
 
 #include <boost/beast/version.hpp>
 
 namespace arby::binance
 {
+
+struct rest_context_args
+{
+    std::string host, port;
+};
+
 namespace detail
 {
 
-std::string
+inline std::string
 parse_url(const std::string &base, const std::string &addition)
 {
     if (base.ends_with('/'))
@@ -37,8 +44,9 @@ struct rest_context_impl
 : std::enable_shared_from_this< rest_context_impl >
 , util::has_executor_base
 {
-    rest_context_impl(asio::any_io_executor exec)
+    rest_context_impl(asio::any_io_executor exec, rest_context_args args)
     : util::has_executor_base(exec)
+    , args_(std::move(args))
     {
     }
 
@@ -48,71 +56,18 @@ struct rest_context_impl
         return "binance::rest";
     }
 
-    asio::awaitable< std::pair< http::response< http::dynamic_body >, error_code > >
-    get(std::string url)
-    {
-        using response_type = http::response< http::dynamic_body >;
-        using ret_type      = std::pair< response_type, error_code >;
-        using req_type      = http::request< http::string_body >;
-
-        error_code ec;
-
-        // Lookup domain
-        auto resolver = tcp::resolver(get_executor());
-        auto results  = co_await resolver.async_resolve(host_, port_, asio::redirect_error(asio::use_awaitable, ec));
-        if (ec)
-        {
-            spdlog::error("{}::{}: resolve: {}", __FILE__, classname(), ec.what());
-            co_return ret_type(response_type(), ec);
-        }
-
-        auto stream = beast::tcp_stream(get_executor());
-        stream.expires_after(std::chrono::seconds(30));
-
-        co_await stream.async_connect(results, asio::redirect_error(asio::use_awaitable, ec));
-        if (ec)
-        {
-            spdlog::error("{}::{}: connect: {}", __FILE__, classname(), ec.what());
-            co_return ret_type(response_type(), ec);
-        }
-
-        // Setup GET message
-        auto req = req_type(http::verb::get, parse_url(base_uri_, url), 1);
-        req.set(http::field::host, host_);
-        req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
-        stream.expires_after(std::chrono::seconds(30));
-
-        co_await http::async_write(stream, req, asio::redirect_error(asio::use_awaitable, ec));
-        if (ec)
-        {
-            spdlog::error("{}::{}: write: {}", __FILE__, classname(), ec.what());
-            co_return ret_type(response_type(), ec);
-        }
-
-        beast::flat_buffer b;
-        response_type      res;
-        co_await http::async_read(stream, b, res, asio::redirect_error(asio::use_awaitable, ec));
-        if (ec)
-        {
-            spdlog::error("{}::{}: read: {}", __FILE__, classname(), ec.what());
-            co_return ret_type(response_type(), ec);
-        }
-
-        // Close connection
-        stream.close();
-
-        co_return std::make_pair(res, error_code());
-    }
+    asio::awaitable< std::tuple< http::response< http::string_body >, error_code > >
+    get(std::string url);
 
   private:
-    const std::string host_, port_, base_uri_;
+    const rest_context_args args_;
 };
 }   // namespace detail
 
 struct rest_context
 {
-    rest_context(asio::any_io_executor exec)
-    : impl_(std::make_shared< detail::rest_context_impl >(exec))
+    rest_context(asio::any_io_executor exec, rest_context_args args)
+    : impl_(std::make_shared< detail::rest_context_impl >(exec, std::move(args)))
     {
     }
 
@@ -122,12 +77,45 @@ struct rest_context
         return impl_->get_executor();
     }
 
-    asio::awaitable< std::pair< http::response< http::dynamic_body >, error_code > >
+    asio::awaitable< std::tuple< protocol::http::v3depth, error_code > >
+    v3_depth(trading::market_key const & key, std::size_t const limit = 5000)
+    {
+        assert(limit <= 5000);
+
+        // Extract spot market key
+        auto spot_key = get_if<trading::spot_market_key>(&key.as_variant());
+
+        std::string url;
+        if (limit == 0) {
+            url = fmt::format("/api/v3/depth?symbol={}{}",spot_key->base,spot_key->term);
+        } else {
+            url = fmt::format("/api/v3/depth?symbol={}{}&limit={}",spot_key->base,spot_key->term,limit);
+        }
+
+        auto [http_resp, ec] = co_await get(url);
+        if (ec)
+            co_return std::make_tuple(protocol::http::v3depth{},ec);
+
+        if (http_resp.result() != http::status::ok)
+            co_return std::make_tuple(protocol::http::v3depth{},error_code(asio::error::fault));
+
+        // OK response type, try and parse the body as json
+        auto &body = http_resp.body();
+        //spdlog::debug(body);
+        auto v = json::parse(boost::string_view(body.data(), body.size()));
+
+        // Attempt to parse into the protocol message
+        auto pmsg = protocol::http::v3depth::parse(v);
+        co_return std::make_tuple(pmsg,ec);
+    }
+
+  private:
+    asio::awaitable< std::tuple< http::response< http::string_body >, error_code > >
     get(std::string url)
     {
         co_return co_await asioex::execute_on(get_executor(),
                                               [lifetime = impl_, url = std::move(url)]() mutable
-                                              -> asio::awaitable< std::pair< http::response< http::dynamic_body >, error_code > >
+                                              -> asio::awaitable< std::tuple< http::response< http::string_body >, error_code > >
                                               { co_return co_await lifetime->get(std::move(url)); });
     }
 

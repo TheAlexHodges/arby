@@ -170,6 +170,7 @@ check(ssl::context &sslctx)
     auto con     = std::make_shared< power_trade::connector >(this_exec, sslctx);
     auto watch1  = std::make_unique< power_trade::event_listener >(con, "heartbeat");
     auto eth_log = std::make_unique< power_trade::tick_logger >(con, "ETH-USD", fs::temp_directory_path() / "eth-usd.txt");
+    auto rcon = key_signals['i'].connect([&] { con->interrupt(); });
 
     auto                    watch2 = power_trade::orderbook_listener_impl::create(this_exec, con, trading::spot_key("eth/usd"));
     sigs::scoped_connection w2con;
@@ -238,8 +239,8 @@ main(int argc, char **argv)
 
     try
     {
-        //        co_spawn(ioc, watch(), detached);
-        co_spawn(ioc, run_binance(sslctx), detached);
+        co_spawn(ioc, check(sslctx), detached);
+        //co_spawn(ioc, run_binance(sslctx), detached);
         ioc.run();
         threadpool.join();
     }
